@@ -3,7 +3,9 @@ import Stripe from "stripe";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
+function getStripe() {
+  return new Stripe(process.env.STRIPE_SECRET_KEY!);
+}
 
 export async function POST(req: NextRequest) {
   const supabase = await createClient();
@@ -18,7 +20,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Provide a code and either percentOff or amountOffCents" }, { status: 400 });
   }
 
-  const stripeCoupon = await stripe.coupons.create({
+  const stripeCoupon = await getStripe().coupons.create({
     percent_off: percentOff || undefined,
     amount_off: amountOffCents || undefined,
     currency: amountOffCents ? "usd" : undefined,
