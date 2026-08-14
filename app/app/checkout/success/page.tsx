@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { ink, mist, fontBody, fontDisplay } from "@/lib/design-tokens";
 
-export default function CheckoutSuccessPage() {
+function CheckoutSuccessInner() {
   const params = useSearchParams();
   const sessionId = params.get("session_id");
   const [status, setStatus] = useState<"loading" | "error">("loading");
@@ -20,7 +20,6 @@ export default function CheckoutSuccessPage() {
         return res.json();
       })
       .then(({ magicLink }) => {
-        // Consuming this URL is what actually sets the Supabase session cookie
         window.location.href = magicLink;
       })
       .catch(() => setStatus("error"));
@@ -60,5 +59,13 @@ export default function CheckoutSuccessPage() {
         </>
       )}
     </div>
+  );
+}
+
+export default function CheckoutSuccessPage() {
+  return (
+    <Suspense fallback={null}>
+      <CheckoutSuccessInner />
+    </Suspense>
   );
 }
