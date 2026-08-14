@@ -20,6 +20,7 @@ function ProgramsInner() {
 
   const [tiers, setTiers] = useState<Tier[]>([]);
   const [selected, setSelected] = useState("Complete");
+  const [autoRenew, setAutoRenew] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -32,6 +33,8 @@ function ProgramsInner() {
       .order("sort_order")
       .then(({ data }) => setTiers(data ?? []));
   }, []);
+
+  const selectedTier = tiers.find((t) => t.name === selected);
 
   const goToCheckout = async () => {
     if (!pendingSignupId) {
@@ -47,7 +50,7 @@ function ProgramsInner() {
         await fetch("/api/onboarding/tier", {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ pendingSignupId, tierId: tier.id }),
+          body: JSON.stringify({ pendingSignupId, tierId: tier.id, autoRenew }),
         });
       }
 
@@ -87,6 +90,28 @@ function ProgramsInner() {
           </button>
         ))}
       </div>
+
+      <button
+        type="button"
+        onClick={() => setAutoRenew((v) => !v)}
+        className="w-full text-left mt-4 p-4 rounded-2xl flex items-start gap-3"
+        style={{ background: mist }}
+      >
+        <div
+          className="w-5 h-5 rounded-md flex items-center justify-center mt-0.5 shrink-0"
+          style={autoRenew ? { background: green } : { background: "#fff", border: `1.5px solid ${ink}33` }}
+        >
+          {autoRenew && <Check size={12} color="#fff" />}
+        </div>
+        <div>
+          <div className="text-sm font-semibold" style={{ color: ink }}>Auto-renew my plan</div>
+          <div className="text-xs opacity-60 mt-0.5">
+            {selectedTier
+              ? `We'll automatically charge your card $${(selectedTier.price_cents / 100).toFixed(0)} again every ${selectedTier.duration_days / 7} weeks so you never lose access. Cancel anytime from Manage Subscription.`
+              : "We'll automatically renew your plan when it ends, using the same card. Cancel anytime."}
+          </div>
+        </div>
+      </button>
 
       {error && <p className="text-sm text-center mt-4" style={{ color: "#DC2626" }}>{error}</p>}
 

@@ -15,7 +15,7 @@ export async function POST(req: NextRequest) {
   const supabase = createAdminClient();
   const { data: pending, error } = await supabase
     .from("pending_signups")
-    .select("id, email, tier_id, coupon_code, membership_tiers(name, price_cents, stripe_price_id)")
+    .select("id, email, tier_id, coupon_code, auto_renew, membership_tiers(name, price_cents, stripe_price_id)")
     .eq("id", pendingSignupId)
     .single();
 
@@ -30,7 +30,7 @@ export async function POST(req: NextRequest) {
   };
 
   const session = await getStripe().checkout.sessions.create({
-    mode: "payment", // one-time, per spec — plans are billed once, not recurring
+    mode: "payment", // one-time per charge — auto-renew re-charges via cron, not a Stripe subscription
     payment_method_types: ["card"], // Apple Pay / Google Pay auto-enabled via Payment Request Button on Stripe's side
     customer_email: pending.email,
     line_items: [
@@ -47,6 +47,15 @@ export async function POST(req: NextRequest) {
     ],
     discounts: pending.coupon_code ? [{ coupon: pending.coupon_code }] : undefined,
     metadata: { pending_signup_id: pending.id },
+    // Auto-renew: save the card for a future off-session charge, and make
+    // sure a real Stripe Customer object exists to attach it to (a plain
+    // one-time payment session doesn't create one by default).
+    ...(pending.auto_renew
+      ? {
+          customer_creation: "always" as const,
+          payment_intent_data: { setup_future_usage: "off_session" as const },
+        }
+      : {}),
     success_url: `${process.env.NEXT_PUBLIC_APP_URL}/checkout/success?session_id={CHECKOUT_SESSION_ID}`,
     cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/programs`,
   });

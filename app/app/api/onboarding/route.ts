@@ -6,7 +6,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 // until the Stripe webhook confirms payment.
 export async function POST(req: NextRequest) {
   const body = await req.json();
-  const { email, tierName, onboardingData, couponCode, referralCode } = body;
+  const { email, phone, tierName, onboardingData, couponCode, referralCode } = body;
 
   if (!email || !tierName || !onboardingData) {
     return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
@@ -28,6 +28,7 @@ export async function POST(req: NextRequest) {
     .from("pending_signups")
     .insert({
       email,
+      phone: phone || null,
       tier_id: tier.id,
       onboarding_data: onboardingData,
       coupon_code: couponCode ?? null,

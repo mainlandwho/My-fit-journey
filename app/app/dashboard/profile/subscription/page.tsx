@@ -3,6 +3,7 @@ import { Card } from "@/components/ui/primitives";
 import { Button } from "@/components/ui/Button";
 import { SubScreenHeader } from "@/components/dashboard/SubScreenHeader";
 import { UpgradeButton } from "@/components/dashboard/UpgradeButton";
+import { AutoRenewRow } from "@/components/dashboard/AutoRenewRow";
 import { ink, green, greenDeep, fontDisplay } from "@/lib/design-tokens";
 
 export default async function SubscriptionPage() {
@@ -11,7 +12,7 @@ export default async function SubscriptionPage() {
 
   const { data: subscription } = await supabase
     .from("subscriptions")
-    .select("status, starts_at, ends_at, amount_cents, membership_tiers(name)")
+    .select("id, status, starts_at, ends_at, amount_cents, auto_renew, payment_method_id, membership_tiers(name)")
     .eq("user_id", user!.id)
     .eq("status", "active")
     .order("starts_at", { ascending: false })
@@ -32,6 +33,14 @@ export default async function SubscriptionPage() {
           {subscription ? `Active through ${new Date(subscription.ends_at).toLocaleDateString()}` : "No active subscription"}
         </div>
       </Card>
+
+      {subscription && (
+        <AutoRenewRow
+          subscriptionId={subscription.id}
+          autoRenew={subscription.auto_renew}
+          hasPaymentMethod={!!subscription.payment_method_id}
+        />
+      )}
 
       {tierName !== "VIP Coaching" && <UpgradeButton />}
 

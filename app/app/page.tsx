@@ -3,7 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { Card, Pill, JourneyRing } from "@/components/ui/primitives";
 import { Button } from "@/components/ui/Button";
 import { ink, mist, green, greenDeep, fontBody, fontDisplay } from "@/lib/design-tokens";
-import { Check, ArrowRight, Bell } from "lucide-react";
+import { Check, ArrowRight } from "lucide-react";
 
 const STEPS = [
   { n: "01", t: "Choose your goal", d: "Weight loss, toning, or muscle — pick the path that fits you." },
@@ -38,7 +38,7 @@ export default async function LandingPage() {
         <div style={{ position: "absolute", width: 340, height: 340, borderRadius: "50%", background: `radial-gradient(circle, ${green}55 0%, transparent 70%)`, top: -120, right: -100, filter: "blur(10px)" }} />
         <div className="flex items-center justify-between mb-10 relative">
           <span className="font-bold text-lg tracking-tight" style={fontDisplay}>My Fit Journey</span>
-          <Bell size={20} className="opacity-70" />
+          <Link href="/login" className="text-sm font-semibold" style={{ color: "#fff", opacity: 0.85 }}>Sign In</Link>
         </div>
         <div className="relative">
           <Pill active>Science-backed · Personalized</Pill>

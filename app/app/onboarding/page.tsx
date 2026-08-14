@@ -10,11 +10,6 @@ import { feetInchesToCm, lbsToKg } from "@/lib/units";
 
 const ONBOARD_STEPS = ["Goal", "About you", "Body", "Lifestyle", "Health", "Review"];
 
-// IMPORTANT: these must live at module scope, not inside OnboardingPage.
-// Defining a component inside another component's body means React sees a
-// brand-new component type on every re-render (every keystroke, since that
-// updates state) — it then unmounts the old <input> and mounts a new one,
-// which drops focus and dismisses the keyboard after a single character.
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="mb-4">
@@ -40,6 +35,7 @@ function Chips({ options, value, onChange }: { options: string[]; value: string;
 
 const inputStyle = "w-full px-4 py-3 rounded-xl text-[15px] outline-none";
 const inputBg = { background: mist, color: ink };
+const errorText = { color: "#DC2626" };
 
 export default function OnboardingPage() {
   const router = useRouter();
@@ -48,7 +44,7 @@ export default function OnboardingPage() {
   const [submitError, setSubmitError] = useState<string | null>(null);
 
   const [data, setData] = useState({
-    goal: "Weight Loss + Toning", name: "", email: "", password: "",
+    goal: "Weight Loss + Toning", name: "", email: "", password: "", confirmPassword: "", phone: "",
     age: "", gender: "Female", heightFt: "", heightIn: "", weightLbs: "", goalWeightLbs: "", bodyFatPct: "",
     activity: "Moderately active", location: "Both", days: "4", exp: "Beginner",
     diet: "Standard", meals: "3", allergies: "", dislikes: "",
@@ -56,6 +52,28 @@ export default function OnboardingPage() {
   });
   const set = (k: string, v: any) => setData((d) => ({ ...d, [k]: v }));
   const pct = ((step + 1) / ONBOARD_STEPS.length) * 100;
+
+  // Every required field on the current step must be filled before "Continue"
+  // is enabled — this is what prevents skipping ahead with blank fields.
+  const emailLooksValid = /\S+@\S+\.\S+/.test(data.email);
+  const passwordsMatch = data.password.length >= 8 && data.password === data.confirmPassword;
+
+  const stepValid = (() => {
+    switch (step) {
+      case 0:
+        return !!data.goal;
+      case 1:
+        return data.name.trim() !== "" && emailLooksValid && passwordsMatch && data.age !== "";
+      case 2:
+        return data.heightFt !== "" && data.heightIn !== "" && data.weightLbs !== "" && data.goalWeightLbs !== "";
+      case 3:
+        return true; // every field here has a sensible default already selected
+      case 4:
+        return data.agree;
+      default:
+        return true;
+    }
+  })();
 
   const handleSubmit = async () => {
     setSubmitting(true);
@@ -66,9 +84,11 @@ export default function OnboardingPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           email: data.email,
+          phone: data.phone || null,
           tierName: "Complete",
           onboardingData: {
             name: data.name,
+            password: data.password,
             age: Number(data.age),
             gender: data.gender,
             heightCm: Math.round(feetInchesToCm(Number(data.heightFt) || 0, Number(data.heightIn) || 0) * 10) / 10,
@@ -138,9 +158,24 @@ export default function OnboardingPage() {
           <>
             <h2 className="text-2xl font-extrabold tracking-tight mb-6" style={{ ...fontDisplay, color: ink }}>Tell us about you</h2>
             <Field label="Full name"><input className={inputStyle} style={inputBg} value={data.name} onChange={(e) => set("name", e.target.value)} placeholder="Jamie Rivera" /></Field>
-            <Field label="Email"><input type="email" className={inputStyle} style={inputBg} value={data.email} onChange={(e) => set("email", e.target.value)} placeholder="jamie@email.com" /></Field>
-            <Field label="Password"><input type="password" className={inputStyle} style={inputBg} value={data.password} onChange={(e) => set("password", e.target.value)} placeholder="••••••••" /></Field>
+            <Field label="Email">
+              <input type="email" className={inputStyle} style={inputBg} value={data.email} onChange={(e) => set("email", e.target.value)} placeholder="jamie@email.com" />
+              {data.email !== "" && !emailLooksValid && <p className="text-xs mt-1.5" style={errorText}>Enter a valid email address</p>}
+            </Field>
+            <Field label="Password">
+              <input type="password" className={inputStyle} style={inputBg} value={data.password} onChange={(e) => set("password", e.target.value)} placeholder="At least 8 characters" />
+            </Field>
+            <Field label="Confirm password">
+              <input type="password" className={inputStyle} style={inputBg} value={data.confirmPassword} onChange={(e) => set("confirmPassword", e.target.value)} placeholder="Re-enter your password" />
+              {data.confirmPassword !== "" && data.password !== data.confirmPassword && (
+                <p className="text-xs mt-1.5" style={errorText}>Passwords don&apos;t match</p>
+              )}
+              {data.password !== "" && data.password.length < 8 && (
+                <p className="text-xs mt-1.5" style={errorText}>Password must be at least 8 characters</p>
+              )}
+            </Field>
             <Field label="Age"><input inputMode="numeric" className={inputStyle} style={inputBg} value={data.age} onChange={(e) => set("age", e.target.value)} placeholder="29" /></Field>
+            <Field label="Phone number (optional)"><input type="tel" inputMode="tel" className={inputStyle} style={inputBg} value={data.phone} onChange={(e) => set("phone", e.target.value)} placeholder="(555) 123-4567" /></Field>
             <Field label="Gender"><Chips options={["Female", "Male", "Other"]} value={data.gender} onChange={(v) => set("gender", v)} /></Field>
           </>
         )}
@@ -191,6 +226,7 @@ export default function OnboardingPage() {
                 I confirm the information above is accurate and I agree to the Medical Disclaimer — this program is not a substitute for professional medical advice.
               </p>
             </div>
+            {!data.agree && <p className="text-xs mt-2" style={errorText}>You must agree to continue</p>}
           </>
         )}
 
@@ -212,7 +248,7 @@ export default function OnboardingPage() {
       <div className="fixed bottom-0 left-0 right-0 p-5 bg-white" style={{ boxShadow: "0 -8px 24px -12px rgba(0,0,0,0.15)" }}>
         <div className="max-w-md mx-auto">
           <Button
-            variant="primary" className="w-full" disabled={submitting}
+            variant="primary" className="w-full" disabled={submitting || !stepValid}
             onClick={() => (step === ONBOARD_STEPS.length - 1 ? handleSubmit() : setStep(step + 1))}
           >
             {submitting ? "Saving…" : step === ONBOARD_STEPS.length - 1 ? "Continue to Programs" : "Continue"}

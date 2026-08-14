@@ -27,8 +27,29 @@ export async function POST(req: NextRequest) {
   const session = event.data.object as Stripe.Checkout.Session;
   const pendingSignupId = session.metadata?.pending_signup_id;
   const upgradeUserId = session.metadata?.upgrade_user_id;
+  const enableAutorenewSubscriptionId = session.metadata?.enable_autorenew_subscription_id;
 
   const supabase = createAdminClient();
+
+  // ---------- Path C: enabling auto-renew on an existing subscription ----------
+  // (Setup-mode session from /api/enable-autorenew — just saves a card, no charge.)
+  if (session.mode === "setup" && enableAutorenewSubscriptionId) {
+    let paymentMethodId: string | null = null;
+    if (session.setup_intent) {
+      const setupIntent = await getStripe().setupIntents.retrieve(session.setup_intent as string);
+      paymentMethodId = (setupIntent.payment_method as string) ?? null;
+    }
+    await supabase
+      .from("subscriptions")
+      .update({
+        auto_renew: true,
+        payment_method_id: paymentMethodId,
+        stripe_customer_id: session.customer as string,
+      })
+      .eq("id", enableAutorenewSubscriptionId);
+
+    return NextResponse.json({ received: true });
+  }
 
   // ---------- Path B: existing user upgrading to VIP Coaching ----------
   // (No account creation needed — see /api/upgrade.)
@@ -86,6 +107,7 @@ export async function POST(req: NextRequest) {
   //    referral_codes rows automatically — see migrations 0002, 0009, 0011).
   const { data: authUser, error: authError } = await supabase.auth.admin.createUser({
     email: pending.email,
+    password: onboarding.password, // collected + confirmed during onboarding step 2
     email_confirm: true, // instant access, no email verification gate
     user_metadata: { full_name: onboarding.name },
   });
@@ -134,12 +156,27 @@ export async function POST(req: NextRequest) {
       primary_goal: onboarding.goal,
       target_date: onboarding.targetDate ?? null,
       medical_disclaimer_agreed_at: onboarding.agree ? new Date().toISOString() : null,
+      phone: pending.phone ?? null,
     })
     .eq("id", userId);
 
   // 4. Record the purchase
   const startsAt = new Date();
   const endsAt = new Date(startsAt.getTime() + tier.duration_days * 24 * 60 * 60 * 1000);
+
+  // If the customer opted into auto-renew, Stripe saved their card via
+  // setup_future_usage — grab the payment method id off the PaymentIntent
+  // so the cron job can charge it again off-session later.
+  let paymentMethodId: string | null = null;
+  if (pending.auto_renew && session.payment_intent) {
+    try {
+      const paymentIntent = await getStripe().paymentIntents.retrieve(session.payment_intent as string);
+      paymentMethodId = (paymentIntent.payment_method as string) ?? null;
+    } catch (err) {
+      console.error("Failed to retrieve payment method for auto-renew:", err);
+    }
+  }
+
   await supabase.from("subscriptions").insert({
     user_id: userId,
     tier_id: tier.id,
@@ -149,6 +186,8 @@ export async function POST(req: NextRequest) {
     amount_cents: session.amount_total ?? tier.price_cents,
     starts_at: startsAt.toISOString(),
     ends_at: endsAt.toISOString(),
+    auto_renew: pending.auto_renew ?? false,
+    payment_method_id: paymentMethodId,
   });
 
   // 5. Resolve a referral, if one was applied
