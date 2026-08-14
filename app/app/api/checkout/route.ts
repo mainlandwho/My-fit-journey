@@ -2,7 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 import { createAdminClient } from "@/lib/supabase/admin";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
+function getStripe() {
+  return new Stripe(process.env.STRIPE_SECRET_KEY!);
+}
 
 export async function POST(req: NextRequest) {
   const { pendingSignupId } = await req.json();
@@ -27,7 +29,7 @@ export async function POST(req: NextRequest) {
     stripe_price_id: string | null;
   };
 
-  const session = await stripe.checkout.sessions.create({
+  const session = await getStripe().checkout.sessions.create({
     mode: "payment", // one-time, per spec — plans are billed once, not recurring
     payment_method_types: ["card"], // Apple Pay / Google Pay auto-enabled via Payment Request Button on Stripe's side
     customer_email: pending.email,
