@@ -2,7 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
 import { createClient } from "@/lib/supabase/server";
 
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY! });
+function getAnthropic() {
+  return new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY! });
+}
 
 export async function POST(req: NextRequest) {
   const { message } = await req.json();
@@ -16,7 +18,6 @@ export async function POST(req: NextRequest) {
 
   const today = new Date().toISOString().slice(0, 10);
 
-  // Ground the coach in this user's actual data — not a generic chatbot.
   const [{ data: profile }, { data: mealPlan }, { data: recentMetrics }, { data: history }] = await Promise.all([
     supabase.from("profiles").select("primary_goal, diet_preference, workout_experience, food_allergies").eq("id", user.id).single(),
     supabase.from("meal_plans").select("calorie_target, protein_target_g, carb_target_g, fat_target_g, meals(name, meal_type, calories, is_completed)").eq("user_id", user.id).eq("plan_date", today).maybeSingle(),
@@ -24,7 +25,6 @@ export async function POST(req: NextRequest) {
     supabase.from("ai_coach_messages").select("sender, message").eq("user_id", user.id).order("created_at", { ascending: false }).limit(10),
   ]);
 
-  // Store the user's message first
   await supabase.from("ai_coach_messages").insert({ user_id: user.id, sender: "user", message });
 
   const systemPrompt = `You are the AI Coach inside My Fit Journey, a fitness and nutrition app. Be warm, encouraging, and concrete — reference the user's actual plan when relevant. Keep replies short (2-4 sentences), mobile-friendly. Never invent medical advice; for symptoms or medical concerns, suggest they consult a doctor.
@@ -42,7 +42,7 @@ Recent weight entries: ${recentMetrics?.map((m: any) => `${m.recorded_at}: ${m.w
     .map((m: any) => ({ role: m.sender === "user" ? "user" as const : "assistant" as const, content: m.message }));
 
   try {
-    const response = await anthropic.messages.create({
+    const response = await getAnthropic().messages.create({
       model: "claude-haiku-4-5-20251001",
       max_tokens: 300,
       system: systemPrompt,
