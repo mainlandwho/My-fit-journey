@@ -1,8 +1,8 @@
-import { createServerClient } from "@supabase/ssr";
+import { createServerClient, type CookieOptionsWithName } from "@supabase/ssr";
 import { cookies } from "next/headers";
 
-// Used in Server Components, Route Handlers, and Server Actions.
-// Still respects RLS — reads the logged-in user's session from cookies.
+type CookieToSet = { name: string; value: string; options?: CookieOptionsWithName };
+
 export async function createClient() {
   const cookieStore = await cookies();
 
@@ -14,14 +14,13 @@ export async function createClient() {
         getAll() {
           return cookieStore.getAll();
         },
-        setAll(cookiesToSet) {
+        setAll(cookiesToSet: CookieToSet[]) {
           try {
             cookiesToSet.forEach(({ name, value, options }) =>
               cookieStore.set(name, value, options)
             );
           } catch {
-            // Called from a Server Component with no response to write to — safe to ignore
-            // as long as middleware.ts is refreshing the session.
+            // Called from a Server Component with no response to write to
           }
         },
       },
