@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/Button";
@@ -13,7 +13,7 @@ interface Tier {
   duration_days: number;
 }
 
-export default function ProgramsPage() {
+function ProgramsInner() {
   const router = useRouter();
   const params = useSearchParams();
   const pendingSignupId = params.get("pending");
@@ -35,14 +35,12 @@ export default function ProgramsPage() {
 
   const goToCheckout = async () => {
     if (!pendingSignupId) {
-      // They arrived here without completing onboarding first
       router.push("/onboarding");
       return;
     }
     setLoading(true);
     setError(null);
     try {
-      // Update the pending signup's chosen tier, then create the Checkout Session
       const supabase = createClient();
       const { data: tier } = await supabase.from("membership_tiers").select("id").eq("name", selected).single();
       if (tier) {
@@ -100,5 +98,13 @@ export default function ProgramsPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function ProgramsPage() {
+  return (
+    <Suspense fallback={null}>
+      <ProgramsInner />
+    </Suspense>
   );
 }
