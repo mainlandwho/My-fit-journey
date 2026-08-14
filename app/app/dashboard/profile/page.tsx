@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { Card } from "@/components/ui/primitives";
+import { InstallAppRow } from "@/components/pwa/InstallAppRow";
 import { ink, greenDeep, fontDisplay } from "@/lib/design-tokens";
 import { ChevronRight } from "lucide-react";
 
@@ -36,6 +37,7 @@ export default async function ProfilePage() {
         </div>
       </Card>
       <div className="flex flex-col gap-2.5 mt-4">
+        <InstallAppRow />
         {rows.map((r) => (
           <Link key={r.href} href={r.href}>
             <Card className="p-4 flex items-center justify-between">

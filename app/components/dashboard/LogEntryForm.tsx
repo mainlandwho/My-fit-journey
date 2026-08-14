@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/Button";
 import { ink, mist, fontBody, fontDisplay } from "@/lib/design-tokens";
+import { lbsToKg } from "@/lib/units";
 import { X } from "lucide-react";
 
 export function LogEntryForm({ onClose }: { onClose: () => void }) {
@@ -28,7 +29,7 @@ export function LogEntryForm({ onClose }: { onClose: () => void }) {
       {
         user_id: user.id,
         recorded_at: new Date().toISOString().slice(0, 10),
-        weight_kg: Number(weight),
+        weight_kg: Math.round(lbsToKg(Number(weight)) * 10) / 10,
         body_fat_pct: bodyFat ? Number(bodyFat) : null,
         visceral_fat_rating: visceralFat ? Number(visceralFat) : null,
       },
@@ -56,8 +57,8 @@ export function LogEntryForm({ onClose }: { onClose: () => void }) {
         <div className="mb-4">
           <div className="text-xs font-semibold opacity-50 mb-1.5 uppercase tracking-wide">Weight (required)</div>
           <div className="flex items-center rounded-xl px-4" style={{ background: mist }}>
-            <input inputMode="decimal" className="flex-1 py-3 bg-transparent text-[15px] outline-none" style={{ color: ink }} placeholder="e.g. 72.5" value={weight} onChange={(e) => setWeight(e.target.value)} />
-            <span className="text-xs opacity-40 font-medium">kg</span>
+            <input inputMode="decimal" className="flex-1 py-3 bg-transparent text-[15px] outline-none" style={{ color: ink }} placeholder="e.g. 160" value={weight} onChange={(e) => setWeight(e.target.value)} />
+            <span className="text-xs opacity-40 font-medium">lb</span>
           </div>
         </div>
 

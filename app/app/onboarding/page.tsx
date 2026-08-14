@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/Button";
 import { Card, JourneyRing } from "@/components/ui/primitives";
 import { ink, mist, green, fontBody, fontDisplay } from "@/lib/design-tokens";
 import { ChevronLeft, ChevronRight, Check } from "lucide-react";
+import { feetInchesToCm, lbsToKg } from "@/lib/units";
 
 const ONBOARD_STEPS = ["Goal", "About you", "Body", "Lifestyle", "Health", "Review"];
 
@@ -48,7 +49,7 @@ export default function OnboardingPage() {
 
   const [data, setData] = useState({
     goal: "Weight Loss + Toning", name: "", email: "", password: "",
-    age: "", gender: "Female", heightCm: "", weightKg: "", goalWeightKg: "", bodyFatPct: "",
+    age: "", gender: "Female", heightFt: "", heightIn: "", weightLbs: "", goalWeightLbs: "", bodyFatPct: "",
     activity: "Moderately active", location: "Both", days: "4", exp: "Beginner",
     diet: "Standard", meals: "3", allergies: "", dislikes: "",
     occupation: "", conditions: "", medications: "", targetDate: "", agree: false,
@@ -70,9 +71,9 @@ export default function OnboardingPage() {
             name: data.name,
             age: Number(data.age),
             gender: data.gender,
-            heightCm: Number(data.heightCm),
-            weightKg: Number(data.weightKg),
-            goalWeightKg: Number(data.goalWeightKg),
+            heightCm: Math.round(feetInchesToCm(Number(data.heightFt) || 0, Number(data.heightIn) || 0) * 10) / 10,
+            weightKg: Math.round(lbsToKg(Number(data.weightLbs)) * 10) / 10,
+            goalWeightKg: Math.round(lbsToKg(Number(data.goalWeightLbs)) * 10) / 10,
             bodyFatPct: data.bodyFatPct ? Number(data.bodyFatPct) : null,
             activity: data.activity,
             location: data.location,
@@ -147,9 +148,20 @@ export default function OnboardingPage() {
         {step === 2 && (
           <>
             <h2 className="text-2xl font-extrabold tracking-tight mb-6" style={{ ...fontDisplay, color: ink }}>Your body</h2>
-            <Field label="Height (cm)"><input inputMode="decimal" className={inputStyle} style={inputBg} value={data.heightCm} onChange={(e) => set("heightCm", e.target.value)} placeholder="168" /></Field>
-            <Field label="Current weight (kg)"><input inputMode="decimal" className={inputStyle} style={inputBg} value={data.weightKg} onChange={(e) => set("weightKg", e.target.value)} placeholder="76" /></Field>
-            <Field label="Goal weight (kg)"><input inputMode="decimal" className={inputStyle} style={inputBg} value={data.goalWeightKg} onChange={(e) => set("goalWeightKg", e.target.value)} placeholder="66" /></Field>
+            <Field label="Height">
+              <div className="flex gap-3">
+                <div className="flex-1 flex items-center rounded-xl px-4" style={{ background: mist }}>
+                  <input inputMode="numeric" className="flex-1 py-3 bg-transparent text-[15px] outline-none" style={{ color: ink }} value={data.heightFt} onChange={(e) => set("heightFt", e.target.value)} placeholder="5" />
+                  <span className="text-xs opacity-40 font-medium">ft</span>
+                </div>
+                <div className="flex-1 flex items-center rounded-xl px-4" style={{ background: mist }}>
+                  <input inputMode="numeric" className="flex-1 py-3 bg-transparent text-[15px] outline-none" style={{ color: ink }} value={data.heightIn} onChange={(e) => set("heightIn", e.target.value)} placeholder="6" />
+                  <span className="text-xs opacity-40 font-medium">in</span>
+                </div>
+              </div>
+            </Field>
+            <Field label="Current weight"><input inputMode="decimal" className={inputStyle} style={inputBg} value={data.weightLbs} onChange={(e) => set("weightLbs", e.target.value)} placeholder="168 lb" /></Field>
+            <Field label="Goal weight"><input inputMode="decimal" className={inputStyle} style={inputBg} value={data.goalWeightLbs} onChange={(e) => set("goalWeightLbs", e.target.value)} placeholder="145 lb" /></Field>
             <Field label="Body fat % (optional)"><input inputMode="decimal" className={inputStyle} style={inputBg} value={data.bodyFatPct} onChange={(e) => set("bodyFatPct", e.target.value)} placeholder="Optional" /></Field>
             <Field label="Workout experience"><Chips options={["Beginner", "Intermediate", "Advanced"]} value={data.exp} onChange={(v) => set("exp", v)} /></Field>
           </>

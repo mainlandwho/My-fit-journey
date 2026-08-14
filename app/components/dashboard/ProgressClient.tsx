@@ -5,6 +5,7 @@ import { AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid, ResponsiveContai
 import { Card } from "@/components/ui/primitives";
 import { LogEntryForm } from "@/components/dashboard/LogEntryForm";
 import { ink, mist, green, greenDeep } from "@/lib/design-tokens";
+import { kgToLbs } from "@/lib/units";
 import { Camera } from "lucide-react";
 
 interface Entry {
@@ -17,8 +18,9 @@ interface Entry {
 export function ProgressClient({ entries }: { entries: Entry[] }) {
   const [showForm, setShowForm] = useState(false);
   const latest = entries[entries.length - 1];
-  const chartData = entries.map((e) => ({ d: e.recorded_at.slice(5), w: e.weight_kg }));
-  const change = entries.length >= 2 ? (entries[entries.length - 1].weight_kg - entries[0].weight_kg).toFixed(1) : null;
+  const toLbs = (kg: number) => Math.round(kgToLbs(kg) * 10) / 10;
+  const chartData = entries.map((e) => ({ d: e.recorded_at.slice(5), w: toLbs(e.weight_kg) }));
+  const change = entries.length >= 2 ? (toLbs(entries[entries.length - 1].weight_kg) - toLbs(entries[0].weight_kg)).toFixed(1) : null;
 
   return (
     <>
@@ -41,7 +43,7 @@ export function ProgressClient({ entries }: { entries: Entry[] }) {
           <Card className="p-5">
             <div className="flex items-baseline justify-between mb-2">
               <span className="text-sm font-semibold opacity-60">Weight trend</span>
-              {change && <span className="text-xs font-bold" style={{ color: green }}>{Number(change) <= 0 ? change : `+${change}`} kg</span>}
+              {change && <span className="text-xs font-bold" style={{ color: green }}>{Number(change) <= 0 ? change : `+${change}`} lb</span>}
             </div>
             <div style={{ height: 160 }}>
               <ResponsiveContainer width="100%" height="100%">
@@ -63,7 +65,7 @@ export function ProgressClient({ entries }: { entries: Entry[] }) {
           </Card>
 
           <div className="grid grid-cols-2 gap-3 mt-4">
-            <Card className="p-4"><div className="text-[11px] opacity-50 font-medium">Current weight</div><div className="text-lg font-extrabold mt-1" style={{ color: ink }}>{latest.weight_kg} kg</div></Card>
+            <Card className="p-4"><div className="text-[11px] opacity-50 font-medium">Current weight</div><div className="text-lg font-extrabold mt-1" style={{ color: ink }}>{toLbs(latest.weight_kg)} lb</div></Card>
             <Card className="p-4"><div className="text-[11px] opacity-50 font-medium">Body fat %</div><div className="text-lg font-extrabold mt-1" style={{ color: ink }}>{latest.body_fat_pct ?? "—"}</div></Card>
             <Card className="p-4"><div className="text-[11px] opacity-50 font-medium">Visceral fat</div><div className="text-lg font-extrabold mt-1" style={{ color: ink }}>{latest.visceral_fat_rating ?? "—"}</div></Card>
             <Card className="p-4"><div className="text-[11px] opacity-50 font-medium">Entries logged</div><div className="text-lg font-extrabold mt-1" style={{ color: ink }}>{entries.length}</div></Card>
@@ -75,7 +77,7 @@ export function ProgressClient({ entries }: { entries: Entry[] }) {
               <Card key={e.recorded_at} className="p-4 flex items-center justify-between">
                 <span className="text-xs font-semibold opacity-50">{e.recorded_at}</span>
                 <div className="flex gap-4 text-sm">
-                  <span style={{ color: ink }}>{e.weight_kg} kg</span>
+                  <span style={{ color: ink }}>{toLbs(e.weight_kg)} lb</span>
                   <span className="opacity-50">BF {e.body_fat_pct ?? "—"}%</span>
                   <span className="opacity-50">VF {e.visceral_fat_rating ?? "—"}</span>
                 </div>

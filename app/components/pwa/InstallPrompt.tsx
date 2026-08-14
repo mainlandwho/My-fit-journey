@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { isStandalone, isIOS } from "@/lib/pwa/detect";
 
 const DISMISS_KEY = "mfj_install_banner_dismissed_at";
 const DISMISS_COOLDOWN_DAYS = 14;
@@ -9,20 +10,6 @@ const DISMISS_COOLDOWN_DAYS = 14;
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
   userChoice: Promise<{ outcome: "accepted" | "dismissed" }>;
-}
-
-function isStandalone() {
-  if (typeof window === "undefined") return false;
-  return (
-    window.matchMedia("(display-mode: standalone)").matches ||
-    // iOS Safari's own flag for "launched from home screen"
-    (window.navigator as any).standalone === true
-  );
-}
-
-function isIOS() {
-  if (typeof window === "undefined") return false;
-  return /iphone|ipad|ipod/i.test(window.navigator.userAgent);
 }
 
 function recentlyDismissed() {
@@ -35,9 +22,6 @@ function recentlyDismissed() {
 
 type PwaEventType = "banner_shown" | "install_accepted" | "banner_dismissed";
 
-// Fire-and-forget — install telemetry should never block or break the UI.
-// Table accepts anonymous inserts (see migration 0013), so this works
-// whether or not the visitor is logged in yet.
 async function trackPwaEvent(eventType: PwaEventType, platform: "android" | "ios" | "other") {
   try {
     const supabase = createClient();
@@ -59,7 +43,7 @@ export function InstallPrompt() {
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
-    if (isStandalone()) return; // already installed — never show
+    if (isStandalone()) return;
     if (recentlyDismissed()) return;
 
     if (isIOS()) {
@@ -69,7 +53,6 @@ export function InstallPrompt() {
       return;
     }
 
-    // Android/Chrome: wait for the browser's native install signal
     const handler = (e: Event) => {
       e.preventDefault();
       setDeferredPrompt(e as BeforeInstallPromptEvent);
@@ -135,8 +118,7 @@ export function InstallPrompt() {
         <div style={{ fontSize: 13.5, fontWeight: 700 }}>Install My Fit Journey</div>
         {platform === "ios" ? (
           <div style={{ fontSize: 12, opacity: 0.75, marginTop: 2, lineHeight: 1.4 }}>
-            Tap <strong>Share</strong> <span aria-hidden>􀈂</span>, then{" "}
-            <strong>Add to Home Screen</strong>
+            Tap <strong>Share</strong>, then <strong>Add to Home Screen</strong>
           </div>
         ) : (
           <div style={{ fontSize: 12, opacity: 0.75, marginTop: 2 }}>
