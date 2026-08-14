@@ -4,7 +4,9 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { generateMealPlan } from "@/lib/meal-generator";
 import { generateWorkoutPlan } from "@/lib/workout-generator";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
+function getStripe() {
+  return new Stripe(process.env.STRIPE_SECRET_KEY!);
+}
 const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!;
 
 export async function POST(req: NextRequest) {
@@ -13,7 +15,7 @@ export async function POST(req: NextRequest) {
 
   let event: Stripe.Event;
   try {
-    event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
+    event = getStripe().webhooks.constructEvent(body, signature, webhookSecret);
   } catch (err) {
     return NextResponse.json({ error: `Webhook signature verification failed` }, { status: 400 });
   }
