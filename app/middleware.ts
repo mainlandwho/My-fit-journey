@@ -6,7 +6,6 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  runtime: "nodejs",
   matcher: [
     "/((?!_next/static|_next/image|favicon.png|icons|apple-touch-icon.png|manifest.json|sw.js|offline).*)",
   ],
